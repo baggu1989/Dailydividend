@@ -1,0 +1,1 @@
+print(news.get_news())

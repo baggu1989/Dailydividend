@@ -1,0 +1,11 @@
+requests
+dotenv
+feedparser
+fastapi
+uvicorn
+langchain
+langchain-core
+langchain-groq
+yfinance
+celery
+redis

@@ -3,7 +3,6 @@ import os
 import yfinance as yf
 import logging
 
-# Logger setup
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",

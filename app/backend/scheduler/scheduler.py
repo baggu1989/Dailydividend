@@ -18,7 +18,6 @@ def get_all_user_ids():
     try:
         with open(users_path, "r", encoding="utf-8") as f:
             users_data = json.load(f)
-        # users_data is a list of dicts with 'number' key
         user_ids = [f"whatsapp:{user['number']}" for user in users_data if "number" in user]
         return user_ids
     except Exception as e:

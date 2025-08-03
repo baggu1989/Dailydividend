@@ -11,7 +11,6 @@ env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 celery_app = Celery("whatsapp", broker="redis://localhost:6379/0")
 
-# Logger setup
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -31,7 +30,6 @@ def save_failed_message(number, message, error, retry_count=0):
         "retry_count": retry_count
     }
     
-    # File path in the same directory
     current_dir = Path(__file__).parent
     failed_messages_file = current_dir / "failed_messages.json"
     
@@ -64,7 +62,7 @@ def send_message_to_user(self, number, message):
 
         account_sid = os.getenv("TWILIO_ACCOUNT_SID")
         auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-        whatsapp_from = os.getenv("TWILIO_WHATSAPP_FROM")  # e.g., 'whatsapp:+14155238886'
+        whatsapp_from = os.getenv("TWILIO_WHATSAPP_FROM") 
         
         logger.info(f"TWILIO_ACCOUNT_SID: {account_sid}")
         logger.info(f"TWILIO_AUTH_TOKEN: {auth_token}")
@@ -86,12 +84,10 @@ def send_message_to_user(self, number, message):
     except Exception as e:
         logger.error(f"Failed to send message to {number}: {str(e)} (Attempt {self.request.retries + 1})")
         
-        # If this is the final retry attempt, save to failed messages file
         if self.request.retries >= self.max_retries:
             save_failed_message(number, message, str(e), self.request.retries)
             logger.error(f"Max retries reached for {number}. Message details saved to failed_messages.json")
         else:
             logger.info(f"Retrying in 60 seconds... (Attempt {self.request.retries + 1}/{self.max_retries + 1})")
         
-        # Re-raise the exception to trigger retry
         raise e

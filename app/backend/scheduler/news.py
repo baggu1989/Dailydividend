@@ -58,12 +58,10 @@ class DAILY_NEWS:
         eurostoxx_change = get_index_change("^STOXX50E")
         ftse100_change = get_index_change("^FTSE")
         
-        # Convert to float and handle None values
         sp500_change = float(sp500_change) if sp500_change is not None else 0.0
         eurostoxx_change = float(eurostoxx_change) if eurostoxx_change is not None else 0.0
         ftse100_change = float(ftse100_change) if ftse100_change is not None else 0.0
         
-        # Log the actual values being used
         logger.info(f"Market data being passed to LLM - S&P: {sp500_change:.1f}%, EUROSTOXX: {eurostoxx_change:.1f}%, FTSE: {ftse100_change:.1f}%")
         
         news_list = self.news.fetch_marketaux_news() + self.news.fetch_yahoo_financial_headlines()
@@ -116,10 +114,8 @@ if __name__ == "__main__":
     today = datetime.today().strftime("%Y-%m-%d")
     news_content = news.get_news()
 
-    # Path to your JSON database
     db_path = os.path.join(project_root, "data", "database", "daily_news.json")
 
-    # Load existing data if file exists, else start with empty dict
     if os.path.exists(db_path):
         with open(db_path, "r", encoding="utf-8") as f:
             try:
@@ -129,10 +125,8 @@ if __name__ == "__main__":
     else:
         daily_news = {}
 
-    # Update with today's news
     daily_news[today] = news_content
 
-    # Save back to file
     with open(db_path, "w", encoding="utf-8") as f:
         json.dump(daily_news, f, ensure_ascii=False, indent=2)
 

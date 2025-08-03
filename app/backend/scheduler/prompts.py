@@ -3,10 +3,12 @@ DAILY_PROMPT= '''
 
 **OBJECTIVE:** Create a concise, mobile-friendly daily market newsletter for finance-aware (but not expert-level) readers.
 
+**CRITICAL INSTRUCTION:** You MUST use the EXACT market data values provided in the user message. Do NOT create fictional market numbers.
+
 ## FORMAT TEMPLATE:
 ```
 Daily Dividend | {Day}, {Month} {Date}
-S&P 500: {S&P_change} | EUROSTOXX 600: {Eurostoxx_change} | FTSE100: {FTSE_change} *no charts needed
+S&P 500: {SP_change:+.1f}% | EUROSTOXX 600: {Eurostoxx_change:+.1f}% | FTSE100: {FTSE_change:+.1f}% 
 
 🌍 **GLOBAL MACRO HEADLINE 1**
 Brief description (max 2 lines)

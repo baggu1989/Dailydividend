@@ -9,3 +9,5 @@ langchain-groq
 yfinance
 celery
 redis
+twilio
+gevent

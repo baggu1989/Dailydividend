@@ -12,6 +12,7 @@ class ChatState(TypedDict):
     query: str
     results: List[str]
     response: str
+    memory: List[Dict[str, str]]  # Add this line
 
 def retrieve_news(state: ChatState):
     """Retrieve relevant news articles for the user's query."""
@@ -28,11 +29,16 @@ def retrieve_news(state: ChatState):
     return state
 
 def generate_response(state: ChatState):
-    """Generate a response using the retrieved news articles."""
+    """Generate a response using the retrieved news articles and conversation history."""
     try:
+        # Build conversation history string
+        history = ""
+        for turn in state.get("memory", []):
+            history += f"User: {turn['user']}\nBot: {turn['bot']}\n"
         news_content = "\n".join(state.get("results", []))
         prompt = f"""
-You are a financial news assistant. Use the following news articles to answer the user's query.
+You are a financial news assistant. Here is the conversation so far:
+{history}
 
 --- User Query ---
 {state['query']}
@@ -40,13 +46,14 @@ You are a financial news assistant. Use the following news articles to answer th
 --- Retrieved News ---
 {news_content}
 
-Please provide a clear, informative response using the available news information.
+Please provide a clear, informative response using the available news information and conversation history.
 """
-        # Call ChatGroq with model from config
-        #import pdb; pdb.set_trace()  # Debugging line, remove in production
+        import pdb; pdb.set_trace()  # Debugging line, remove in production
         llm = ChatGroq(model_name=settings.LLM_MODEL)
-        state["response"] = llm.invoke(prompt)
-        #import pdb;pdb.set_trace()  # Debugging line, remove in production
+        response_obj = llm.invoke(prompt)
+        # Ensure response is a string
+        response_str = response_obj.content if hasattr(response_obj, "content") else str(response_obj)
+        state["response"] = response_str
         logger.info("Generated response for user query using ChatGroq.")
     except Exception as e:
         logger.error(f"Error generating response: {str(e)}")

@@ -29,7 +29,9 @@ def chat(payload: ChatInput):
         state = chatbot.invoke(state)
         state = generate_response(state)  # Explicitly call LLM
         #import pdb; pdb.set_trace()  # Debugging line, remove in production
-        user_sessions[payload.user_id] = state.get("memory", [])
+        # Update memory with the latest exchange
+        state["memory"].append({"user": payload.query, "bot": state["response"]})
+        user_sessions[payload.user_id] = state["memory"]
         
         # Ensure response is a string
         response_obj = state.get("response")

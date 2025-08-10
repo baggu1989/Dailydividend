@@ -58,7 +58,7 @@ def fetch_marketaux_news():
         return []
     try:
         logger.info("Fetching news from MarketAux...")
-        general_news = marketaux_client.get_news_sentiment()
+        general_news = marketaux_client.get_news_sentiment(limit=200)
         for item in general_news:
             item["api_source"] = "marketaux"
         logger.info(f"Fetched {len(general_news)} MarketAux articles")
@@ -71,7 +71,7 @@ def fetch_combined_news():
     """Fetch all news from Yahoo Finance RSS and MarketAux"""
     rss_news = fetch_rss_news()
     marketaux_news = fetch_marketaux_news()
-    combined_news = rss_news #+ marketaux_news
+    combined_news = rss_news + marketaux_news
     # Remove duplicates by title
     unique_news = []
     seen_titles = set()

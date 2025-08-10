@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 from app.logging.logger import logger
 from app.config import settings
+from newspaper import Article as NewsArticle
+from datetime import datetime, timedelta
 
 class MarketAuxClient:
     """Client for interacting with MarketAux API for financial news and sentiment analysis"""
@@ -51,7 +53,7 @@ class MarketAuxClient:
             
             response = requests.get(f"{self.base_url}/news/all", params=params)
             response.raise_for_status()
-            
+            #import pdb; pdb.set_trace()  # Debugging line, remove in production
             data = response.json()
             articles = data.get('data', [])
             
@@ -161,7 +163,16 @@ class MarketAuxClient:
             sentiment = article.get('sentiment', {})
             sentiment_score = sentiment.get('score', 0)
             sentiment_label = sentiment.get('label', 'neutral')
-
+            article_content = ""
+            if url:
+                try:
+                    news_article = NewsArticle(url)
+                    news_article.download()
+                    news_article.parse()
+                    article_content = news_article.text
+                except Exception as e:
+                    logger.warning(f"Failed to fetch article content from {url}: {str(e)}")
+                    article_content = description  # fallback
             processed_article = {
                 "title": title,
                 "summary": description,
@@ -171,7 +182,8 @@ class MarketAuxClient:
                 "published": published_at,
                 "sentiment_score": sentiment_score,
                 "sentiment_label": sentiment_label,
-                "api_source": "marketaux"
+                "api_source": "marketaux",
+                "article_content": article_content  # Always provide some content
             }
 
             return processed_article

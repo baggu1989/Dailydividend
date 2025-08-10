@@ -10,6 +10,8 @@ from app.logging.logger import logger
 from app.config import settings
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import Chroma
+from app.marketaux_client import marketaux_client
+
 
 class EnhancedNewsScheduler:
     """Enhanced news scheduler with multiple frequencies and source management"""
@@ -45,6 +47,7 @@ class EnhancedNewsScheduler:
             
             # Fetch news from both Yahoo Finance RSS and MarketAux
             news = fetch_combined_news()
+            #market_aux_news = pr()
             if news:
                 process_and_store(news)
                 self.run_stats["articles_fetched"] += len(news)
@@ -80,7 +83,9 @@ class EnhancedNewsScheduler:
         try:
             # Fetch all news from both sources
             news = fetch_combined_news()
-            if news:
+            #articles = marketaux_client.get_news_sentiment(limit=100)
+            combined = (news or []) #+ (articles or [])  # Increase limit as needed
+            if combined:
                 process_and_store(news)
                 self.run_stats["articles_fetched"] += len(news)
                 self.run_stats["successful_runs"] += 1
@@ -137,14 +142,30 @@ class EnhancedNewsScheduler:
             embedder = HuggingFaceEmbeddings(model_name=settings.EMBED_MODEL)
             vectorstore = Chroma(persist_directory=settings.CHROMA_PATH, embedding_function=embedder)
             collection = vectorstore._collection
+
+            # Calculate cutoff date
+            cutoff_date = (datetime.now() - timedelta(days=30)).isoformat()
+            #import pdb;pdb.set_trace()
             # Get all IDs and delete them
-            result = collection.get()
-            all_ids = result.get("ids", [])
-            if all_ids:
-                collection.delete(ids=all_ids)
-                logger.info("Cleanup completed: All content removed from Chroma DB.")
+            result = collection.get(include=["metadatas", "ids"])
+            ids_to_delete = []
+            for idx, metadata in enumerate(result.get("metadatas", [])):
+                doc_date = metadata.get("date")
+                if doc_date and doc_date < cutoff_date:
+                    ids_to_delete.append(result["ids"][idx])
+
+            if ids_to_delete:
+                collection.delete(ids=ids_to_delete)
+                logger.info(f"Cleanup completed: Removed {len(ids_to_delete)} documents older than 30 days from Chroma DB.")
             else:
-                logger.info("Cleanup completed: No documents found in Chroma DB.")
+                logger.info("Cleanup completed: No month-old documents found in Chroma DB.")
+                # all_ids = result.get("ids", [])
+            # if all_ids:
+            #     collection.delete(ids=all_ids)
+            #     logger.info("Cleanup completed: All content removed from Chroma DB.")
+            # else:
+            #     logger.info("Cleanup completed: No documents found in Chroma DB.")
+
         except Exception as e:
             logger.error(f" Cleanup failed: {str(e)}")
     
@@ -164,7 +185,7 @@ class EnhancedNewsScheduler:
         schedule.every(2).hours.do(self.health_check_job)
         
         # Cleanup every day at 2 AM
-        schedule.every().day.at("02:00").do(self.cleanup_job)
+        #schedule.every().day.at("02:00").do(self.cleanup_job)
         
         logger.info(" Schedule configured:")
         logger.info("    Hourly sources: Every hour")
@@ -186,7 +207,7 @@ class EnhancedNewsScheduler:
         self.full_fetch_job()
         
         # Health check
-        self.health_check_job()
+        #elf.health_check_job()
         
         logger.info(" Scheduler is now running. Press Ctrl+C to stop.")
         

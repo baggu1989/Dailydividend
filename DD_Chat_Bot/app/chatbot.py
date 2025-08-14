@@ -46,9 +46,9 @@ You are a financial news assistant. Here is the conversation so far:
 --- Retrieved News ---
 {news_content}
 
-Please provide a clear, informative response using the available news information and conversation history.
+Please provide a clear, informative response using the available news information and conversation history. if no information is avaiable , you can act as financial educator and answer the query based on your knowledge.
 """
-        import pdb; pdb.set_trace()  # Debugging line, remove in production
+        #import pdb; pdb.set_trace()  # Debugging line, remove in production
         llm = ChatGroq(model_name=settings.LLM_MODEL)
         response_obj = llm.invoke(prompt)
         # Ensure response is a string

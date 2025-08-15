@@ -81,14 +81,14 @@ def generate_response(state: ChatState):
 
     Please provide a clear, informative response using the available news information and conversation history. if no information is avaiable , you can act as financial educator and answer the query based on your knowledge.
     """
-            #import pdb; pdb.set_trace()  # Debugging line, remove in production
+            
             llm = ChatGroq(model_name=settings.LLM_MODEL)
             response_obj = llm.invoke(prompt)
             # Ensure response is a string
             response_str = response_obj.content if hasattr(response_obj, "content") else str(response_obj)
             state["response"] = response_str
             logger.info("Generated response for user query using ChatGroq.")
-            import pdb; pdb.set_trace()  # Debugging line, remove in production
+           
             return state
     except Exception as e:
             logger.error(f"Error generating response: {str(e)}")
@@ -102,7 +102,7 @@ def build_graph():
     graph.add_node("respond", generate_response)
     graph.set_entry_point("guardrail")
     # If related, continue to retrieve news; if not, go directly to respond
-    import pdb; pdb.set_trace()  # Debugging line, remove in production
+    
     graph.add_conditional_edges(
         "guardrail",
         lambda state: ["respond"] if state.get("not_related") else ["retrieve"]

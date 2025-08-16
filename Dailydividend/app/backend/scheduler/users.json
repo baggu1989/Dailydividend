@@ -1,0 +1,28 @@
+[
+    {
+        "name" :"rohan",
+        "number":"+918700725940",
+        "frequency": "3"
+    },
+    {
+        "name":"saksham",
+        "number":"+918109744696",
+        "frequency": "2"
+    },
+    {
+        "name":"darshan",
+        "number":"+919986644273",
+        "frequency": "1"
+    },
+    {
+        "name":"adam",
+        "number":"+447403113911",
+        "frequency": "1"
+    },
+    {
+        "name": "ruchi",
+        "number": "+447824730154",
+        "frequency": "3"
+
+    }
+]

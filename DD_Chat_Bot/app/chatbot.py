@@ -1,0 +1,73 @@
+from typing import List, Dict, TypedDict
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from app.config import settings
+from app.logging.logger import logger
+from app.news_fetcher import fetch_combined_news
+from langchain_groq import ChatGroq  # Adjust import if needed
+from langgraph.graph import StateGraph, END
+import re
+
+class ChatState(TypedDict):
+    query: str
+    results: List[str]
+    response: str
+    memory: List[Dict[str, str]]  # Add this line
+
+def retrieve_news(state: ChatState):
+    """Retrieve relevant news articles for the user's query."""
+    try:
+        embedder = HuggingFaceEmbeddings(model_name=settings.EMBED_MODEL)
+        vectorstore = Chroma(persist_directory=settings.CHROMA_PATH, embedding_function=embedder)
+        collection = vectorstore._collection
+        doc_count = collection.count()
+        logger.info(f"Chroma database contains {doc_count} documents.")
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+        docs = retriever.invoke(state["query"])
+        state["results"] = [doc.page_content for doc in docs]
+        logger.info(f"Retrieved {len(docs)} news articles for query: {state['query']}")
+    except Exception as e:
+        logger.error(f"Error retrieving news: {str(e)}")
+        state["results"] = ["Unable to retrieve relevant news at this time."]
+    return state
+
+def generate_response(state: ChatState):
+    """Generate a response using the retrieved news articles and conversation history."""
+    try:
+        # Build conversation history string
+        history = ""
+        for turn in state.get("memory", []):
+            history += f"User: {turn['user']}\nBot: {turn['bot']}\n"
+        news_content = "\n".join(state.get("results", []))
+        prompt = f"""
+You are a financial news assistant. Here is the conversation so far:
+{history}
+
+--- User Query ---
+{state['query']}
+
+--- Retrieved News ---
+{news_content}
+
+Please provide a clear, informative response using the available news information and conversation history. if no information is avaiable , you can act as financial educator and answer the query based on your knowledge.
+keep the reply short like 1-2 paragraph
+"""
+        llm = ChatGroq(model_name=settings.LLM_MODEL)
+        response_obj = llm.invoke(prompt)
+        # Ensure response is a string
+        response_str = response_obj.content if hasattr(response_obj, "content") else str(response_obj)
+        state["response"] = response_str
+        logger.info("Generated response for user query using ChatGroq.")
+    except Exception as e:
+        logger.error(f"Error generating response: {str(e)}")
+        state["response"] = "I apologize, but I'm experiencing technical difficulties. Please try again in a moment."
+    return state
+
+def build_graph():
+    graph = StateGraph(ChatState)
+    graph.add_node("retrieve", retrieve_news)
+    graph.add_node("respond", generate_response)
+    graph.set_entry_point("retrieve")
+    graph.add_edge("retrieve", "respond")
+    graph.add_edge("respond", END)
+    return graph.compile()

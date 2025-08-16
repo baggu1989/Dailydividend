@@ -1,0 +1,78 @@
+
+version: '3'
+
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      bash -c "
+        cd /app && 
+        PYTHONPATH=/app python -m app.backend.scheduler.celery_worker
+      "
+    volumes:
+      - .:/app
+      - ./app/backend/tasks/.env:/app/app/backend/tasks/.env
+      - ./app/backend/scheduler/.env:/app/app/backend/scheduler/.env
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONPATH=/app
+    restart: unless-stopped
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      bash -c "
+        cd /app && 
+        PYTHONPATH=/app python -m app.backend.scheduler.celery_beat
+      "
+    volumes:
+      - .:/app
+      - ./app/backend/tasks/.env:/app/app/backend/tasks/.env
+      - ./app/backend/scheduler/.env:/app/app/backend/scheduler/.env
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - celery-worker
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - PYTHONPATH=/app
+    restart: unless-stopped
+    
+  debug:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python /app/debug_imports.py
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+    profiles:
+      - debug
+
+volumes:
+  redis_data:

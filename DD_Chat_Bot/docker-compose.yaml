@@ -3,7 +3,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.app
+      dockerfile: Dockerfile
     container_name: chat_app
     ports:
       - "8000:8000"

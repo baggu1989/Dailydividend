@@ -16,6 +16,6 @@ requests
 yfinance
 pandas
 numpy
-
+sentence-transformers
 newspaper3k
 lxml_html_clean

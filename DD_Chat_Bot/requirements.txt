@@ -10,7 +10,7 @@ pydantic
 feedparser
 groq
 python-dotenv
-
+langchain-huggingface
 schedule
 requests
 yfinance

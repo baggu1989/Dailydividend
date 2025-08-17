@@ -10,7 +10,7 @@ pydantic
 feedparser
 groq
 python-dotenv
-sentence-transformers
+
 schedule
 requests
 yfinance

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    CHROMA_PATH = "./chroma_news"
+    CHROMA_PATH = "/mnt/chroma-data"
     LOG_LEVEL = "INFO"
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")

@@ -22,7 +22,7 @@ services:
   scheduler:
     build:
       context: .
-      dockerfile: Dockerfile.scheduler
+      dockerfile: Dockerfile_scheduler
     container_name: chat_scheduler
     env_file:
       - .env

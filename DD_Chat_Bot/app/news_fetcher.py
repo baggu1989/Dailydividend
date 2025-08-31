@@ -9,8 +9,9 @@ from langchain.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from app.logging.logger import logger
 from app.config import settings
-from app.marketaux_client import marketaux_client
-from newspaper import Article
+# from app.marketaux_client import marketaux_client
+# from newspaper import Article
+# from duckduckgo_search import DDGS
 
 def fetch_rss_news():
     """Fetch all news from Yahoo Finance RSS only, including article content"""
@@ -149,6 +150,53 @@ def get_news_statistics():
     except Exception as e:
         logger.error(f"Error getting news statistics: {str(e)}")
         return {"error": str(e)}
+    
+# def fetch_news_from_duckduckgo(query: str):
+#     """Fetch news articles from DuckDuckGo based on a query."""
+#     news_items = []
+#     domains = [
+#         "bloomberg.com","reuters.com","cnbc.com","marketwatch.com",
+#         "ft.com","wsj.com","seekingalpha.com","yahoo.com/finance",
+#         "investing.com","morningstar.com","zacks.com","thestreet.com",
+#         "federalreserve.gov","ecb.europa.eu","imf.org","oecd.org","worldbank.org"
+#     ]
+#     filter_str = " OR ".join(f"site:{d}" for d in domains)
+#     input_query = f"({filter_str}) {query}"
+   
+#     try:
+#         ddgs = DDGS()
+#         results = ddgs.text(input_query, max_results=3)
+       
+#         #import pdb; pdb.set_trace()  
+#         for result in results:
+#            if result.get('title') is not None and result.get('url') is not None :
+          
+#                     article_content = ""
+#                     try:
+#                         article = Article(result['url'])
+#                         article.download()
+#                         article.parse()
+#                         article_content = article.text.strip()
+#                         news_item = {
+#                             "title": result.get("title", "").strip(),
+#                             "summary": result.get("body", "").strip(),
+#                             "link": result.get("url", ""),
+#                             "source": result.get("source", ""),
+#                             "date": result.get("date", ""),
+#                             "api_source": "duckduckgo",
+#                             "news_content":result.get('body',""),
+#                             "article_content": article_content
+                            
+#                     }
+#                         news_items.append(news_item)
+#                     except Exception as e:
+#                         logger.warning(f"Failed to fetch article content from {result.link}: {str(e)}")
+    
+#     except Exception as e:
+#         logger.error(f"Error fetching news from DuckDuckGo: {str(e)}")   
+#     logger.info(f"Fetched {len(news_items)} articles from DuckDuckGo for query: {query}")
+#     import pdb; pdb.set_trace()  # Debugging line, remove in production
+#     return news_items
 
 if __name__ == "__main__":
     logger.info("Starting combined news fetching and processing...")

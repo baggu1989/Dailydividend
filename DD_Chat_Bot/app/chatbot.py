@@ -7,52 +7,42 @@ from app.news_fetcher import fetch_combined_news
 from langchain_groq import ChatGroq  
 from langgraph.graph import StateGraph, END
 import re
-
+#from app.news_fetcher import fetch_news_from_duckduckgo
+from openai import OpenAI
 class ChatState(TypedDict):
     query: str
     results: List[str]
     response: str
     memory: List[Dict[str, str]]  
     not_related: bool
+    usage: Dict[str, int]
 
-def check_finance_related_node(state: ChatState):
-    """
-    Node to check if the user's query is related to finance, market, or economy.
-    If not related, set a response and skip further processing.
-    """
-    prompt = f"""
-You are an expert financial assistant. 
-Determine if the following user query is related to finance, stock market, or the economy.
-If it is not related, respond with: "Your query is not related to finance, market, or economy."
-If it is related, respond with: "Related".
 
-User Query:
-{state['query']}
-"""
-    llm = ChatGroq(model_name=settings.LLM_MODEL)
-    response_obj = llm.invoke(prompt)
-    response_str = response_obj.content if hasattr(response_obj, "content") else str(response_obj)
-    logger.info(f"Guardrail LLM raw response: {response_str.strip()}")
-    # Make the check more robust
-    resp_lower = response_str.strip().lower()
-    if "not related" in resp_lower or "your query is not related to finance" in resp_lower:
-        state["response"] = "Your query is not related to finance, market, or economy."
-        state["results"] = []
-        state["not_related"] = True
-    else:
-        state["not_related"] = False
-    logger.info(f"Guardrail check result: {resp_lower}")
-    return state
 
 def retrieve_news(state: ChatState):
     """Retrieve relevant news articles for the user's query."""
     try:
-        embedder = HuggingFaceEmbeddings(model_name=settings.EMBED_MODEL)
-        vectorstore = Chroma(persist_directory=settings.CHROMA_PATH, embedding_function=embedder)
-        retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
-        docs = retriever.get_relevant_documents(state["query"])
-        state["results"] = [doc.page_content for doc in docs]
-        logger.info(f"Retrieved {len(docs)} news articles for query: {state['query']}")
+        # embedder = HuggingFaceEmbeddings(model_name=settings.EMBED_MODEL)
+        # vectorstore = Chroma(persist_directory=settings.CHROMA_PATH, embedding_function=embedder)
+        # retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+        # docs = retriever.get_relevant_documents(state["query"])
+        # #import pdb; pdb.set_trace()  # Debugging line, remove in production
+        # state["results"] = [doc.page_content for doc in docs]
+        # logger.info(f"Retrieved {len(docs)} news articles for query: {state['query']}")
+        # docs=[]
+        # if len(docs) == 0:
+        #     news="" #fetch_news_from_duckduckgo(state["query"])
+        #     if not news:
+        #         state["results"] = ["No relevant news articles found."]
+        #     else:
+        #         state["results"] = [news_item["article_content"]+news_item['news_content'] for news_item in news ]
+        #         import json
+        #         #json_string = json.dumps(news)
+        #         #state["results"] =[news ]
+        #         logger.info(f"Fetched {len(state['results'])} articles from DuckDuckGo for query: {state['query']}")
+        state["results"] =["No news fetchinng is required" ]
+
+
     except Exception as e:
         logger.error(f"Error retrieving news: {str(e)}")
         state["results"] = ["Unable to retrieve relevant news at this time."]
@@ -66,27 +56,40 @@ def generate_response(state: ChatState):
             return state 
         else:
             history = ""
-            for turn in state.get("memory", []):
-                history += f"User: {turn['user']}\nBot: {turn['bot']}\n"
-            news_content = "\n".join(state.get("results", []))
+            # for turn in state.get("memory", []):
+            #     history += f"User: {turn['user']}\nBot: {turn['bot']}\n"
+            # news_content = "\n".join(state.get("results", []))
+            news_content=""
             prompt = f"""
-    You are a financial news assistant. Here is the conversation so far:
-    {history}
+    You are only financial informant and reject if request is not related . Respond to queries with the following checklist 
 
+All market data must be extremely current and accurate
+Make sure to use % changes and number, facts and figures were relevant
+Make sure it is a Mobile-friendly chat format under 200 words. Use bold Headlines and text in bullet points where possible
+Always verify the sources
+Always mention at the end after a line space “Disclaimer: Educational Purposes only“
+
+
+Do not provide investment advice - if asked for your opinion on whether to buy or sell any financial instruments mention 
+
+“I cannot provide investment advice, but I can provide information” and then provide any relevant information from the web with sources 
+ 
     --- User Query ---
     {state['query']}
 
-    --- Retrieved News ---
-    {news_content}
-
-    Please provide a clear, informative response using the available news information and conversation history. if no information is avaiable , you can act as financial educator and answer the query based on your knowledge.
     """
             
-            llm = ChatGroq(model_name=settings.LLM_MODEL)
+            llm =  ChatGroq(model_name=settings.LLM_MODEL)
             response_obj = llm.invoke(prompt)
-            # Ensure response is a string
             response_str = response_obj.content if hasattr(response_obj, "content") else str(response_obj)
-            state["response"] = response_str
+            logger.info(f"Response LLM raw output: {response_str.strip()}")
+            state["response"] = response_str.strip()
+            
+            state["usage"] = {
+                "prompt_tokens": response_obj.usage_metadata['input_tokens'],
+                "completion_tokens": response_obj.usage_metadata['output_tokens'], 
+                "total_tokens": response_obj.usage_metadata['total_tokens']
+            }
             logger.info("Generated response for user query using ChatGroq.")
            
             return state
@@ -97,16 +100,10 @@ def generate_response(state: ChatState):
 
 def build_graph():
     graph = StateGraph(ChatState)
-    graph.add_node("guardrail", check_finance_related_node)
+   
     graph.add_node("retrieve", retrieve_news)
     graph.add_node("respond", generate_response)
-    graph.set_entry_point("guardrail")
-    # If related, continue to retrieve news; if not, go directly to respond
+    graph.set_entry_point("retrieve")
     
-    graph.add_conditional_edges(
-        "guardrail",
-        lambda state: ["respond"] if state.get("not_related") else ["retrieve"]
-    )
-    graph.add_edge("retrieve", "respond")
     graph.add_edge("respond", END)
     return graph.compile()

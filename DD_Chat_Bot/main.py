@@ -5,6 +5,7 @@ from app.chatbot import build_graph, generate_response  # Import generate_respon
 from app.config import settings
 from app.logging.logger import logger
 from app.marketaux_client import marketaux_client
+from app.user_requests.request_tracker import check_and_update_user_limit
 from schema.chat_models import ChatInput, ChatResponse
 from schema.models import HealthStatus
 
@@ -17,6 +18,14 @@ def chat(payload: ChatInput):
     try:
         if not payload.query or not payload.query.strip():
             raise HTTPException(status_code=400, detail="Query cannot be empty")
+        
+        if not check_and_update_user_limit(payload.user_id):
+            return ChatResponse(
+                response="You have reached your daily limit of 5 requests. Please try again after 24 hours.",
+                topic="limit",
+                confidence=None,
+                user_id=payload.user_id
+            )
         
         memory = user_sessions.get(payload.user_id, [])
         state = {
@@ -46,7 +55,12 @@ def chat(payload: ChatInput):
             response=response_str,
             topic=state.get("topic", "general"),
             confidence=None,
-            user_id=payload.user_id
+            user_id=payload.user_id,
+            usage=state.get("usage", {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0
+            })
         )
     except Exception as e:
         logger.error(f"Error processing chat request: {str(e)}")
